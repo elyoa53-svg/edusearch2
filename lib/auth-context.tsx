@@ -23,24 +23,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!mounted) return;
-      if (session?.user) {
-        const profile = await sbUserRepo.getById(session.user.id);
-        if (mounted) setUser(profile ?? null);
-      }
-      if (mounted) setLoading(false);
-    });
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
       if (event === 'SIGNED_OUT' || !session) {
         setUser(null);
+        if (mounted) setLoading(false);
         return;
       }
       if (session?.user) {
         const profile = await sbUserRepo.getById(session.user.id);
-        if (mounted) setUser(profile ?? null);
+        if (mounted) {
+          setUser(profile ?? null);
+          setLoading(false);
+        }
+      } else {
+        if (mounted) setLoading(false);
+      }
+    });
+
+    // Fallback: if onAuthStateChange doesn't fire promptly, resolve loading
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      if (!session) {
+        setUser(null);
+        setLoading(false);
       }
     });
 

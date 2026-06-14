@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { BookOpen, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
-  const { login, user } = useAuth();
+  const { login, user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,7 +19,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    if (!authLoading && user) {
       const redirectMap: Record<string, string> = {
         admin: '/admin',
         professor: '/professor',
@@ -27,7 +27,17 @@ export default function LoginPage() {
       };
       router.replace(redirectMap[user.role] || '/login');
     }
-  }, [user, router]);
+  }, [user, authLoading, router]);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (user) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
