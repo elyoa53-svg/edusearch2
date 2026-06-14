@@ -1,5 +1,3 @@
-'use client';
-
 import { supabase } from './supabase';
 import {
   User, Student, Professor, Case, Assignment, Evaluation,
