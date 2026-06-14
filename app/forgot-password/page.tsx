@@ -2,18 +2,31 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { BookOpen, ArrowLeft, CheckCircle } from 'lucide-react';
+import { BookOpen, ArrowLeft, CheckCircle, Loader2 } from 'lucide-react';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    setLoading(true);
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setLoading(false);
+    if (resetError) {
+      setError('Error al enviar el correo. Intenta de nuevo.');
+      return;
+    }
     setSent(true);
   };
 
@@ -40,24 +53,36 @@ export default function ForgotPasswordPage() {
                 <p className="text-sm text-muted-foreground mt-1">
                   Si existe una cuenta con <strong>{email}</strong>, recibirás instrucciones para restablecer tu contraseña.
                 </p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Simulación: usa el enlace de demostración a continuación.
-                </p>
               </div>
-              <Link href={`/reset-password/demo-token?email=${encodeURIComponent(email)}`}>
-                <Button variant="outline" className="w-full">Ir a restablecer contraseña (demo)</Button>
+              <Link href="/login">
+                <Button variant="outline" className="w-full">Volver al login</Button>
               </Link>
             </CardContent>
           ) : (
             <form onSubmit={handleSubmit}>
               <CardContent className="space-y-4">
+                {error && (
+                  <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-800">
+                    {error}
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="correo@ejemplo.com" value={email} onChange={e => setEmail(e.target.value)} required />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="correo@ejemplo.com"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    required
+                  />
                 </div>
               </CardContent>
               <CardFooter className="flex flex-col gap-3">
-                <Button type="submit" className="w-full">Enviar instrucciones</Button>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Enviar instrucciones
+                </Button>
                 <Link href="/login" className="flex items-center gap-1 text-sm text-blue-600 hover:underline">
                   <ArrowLeft className="h-3 w-3" /> Volver a iniciar sesión
                 </Link>

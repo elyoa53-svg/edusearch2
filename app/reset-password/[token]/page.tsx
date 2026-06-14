@@ -1,26 +1,24 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { BookOpen, CheckCircle, Loader2 } from 'lucide-react';
-import { userRepo } from '@/lib/repository';
 
 function ResetPasswordForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const email = searchParams.get('email') || '';
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -34,22 +32,15 @@ function ResetPasswordForm() {
     }
 
     setLoading(true);
-    setTimeout(() => {
-      if (email) {
-        const user = userRepo.getByEmail(email);
-        if (user) {
-          // Update password in localStorage
-          try {
-            const pwsData = localStorage.getItem('edusearch_passwords');
-            const pws = pwsData ? JSON.parse(pwsData) : {};
-            pws[email] = password;
-            localStorage.setItem('edusearch_passwords', JSON.stringify(pws));
-          } catch { /* ignore */ }
-        }
-      }
-      setLoading(false);
-      setSuccess(true);
-    }, 800);
+    const { error: updateError } = await supabase.auth.updateUser({ password });
+    setLoading(false);
+
+    if (updateError) {
+      setError('Error al actualizar la contraseña. El enlace puede haber expirado.');
+      return;
+    }
+    await supabase.auth.signOut();
+    setSuccess(true);
   };
 
   if (success) {
@@ -91,14 +82,13 @@ function ResetPasswordForm() {
               {error && (
                 <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-800">{error}</div>
               )}
-              {email && <p className="text-sm text-muted-foreground">Cuenta: <strong>{email}</strong></p>}
               <div className="space-y-2">
                 <Label htmlFor="password">Nueva contraseña</Label>
-                <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+                <Input id="password" type="password" placeholder="Mínimo 6 caracteres" value={password} onChange={e => setPassword(e.target.value)} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
-                <Input id="confirmPassword" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
+                <Input id="confirmPassword" type="password" placeholder="Repite tu contraseña" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
               </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-3">

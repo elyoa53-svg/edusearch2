@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { User, UserRole } from './types';
 import { supabase } from './supabase';
 import { sbUserRepo, sbAuditRepo } from './supabase-repository';
@@ -19,6 +20,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     let mounted = true;
@@ -73,9 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { success: false, error: 'Cuenta desactivada' };
     }
 
-    await sbUserRepo.update(profile.id, { lastLogin: new Date().toISOString() });
-    const updated = { ...profile, lastLogin: new Date().toISOString() };
-    setUser(updated);
+    sbUserRepo.update(profile.id, { lastLogin: new Date().toISOString() }).catch(() => {});
 
     sbAuditRepo.create({
       userId: profile.id,
@@ -86,6 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       timestamp: new Date().toISOString(),
     }).catch(() => {});
 
+    // onAuthStateChange will handle setting the user state — don't call setUser here
     return { success: true, role: profile.role };
   }, []);
 
@@ -153,7 +154,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     await supabase.auth.signOut();
     setUser(null);
-  }, [user]);
+    router.replace('/login');
+  }, [user, router]);
 
   const updateProfile = useCallback(async (data: Partial<User>) => {
     if (!user) return;

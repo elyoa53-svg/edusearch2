@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { BookOpen, Loader2 } from 'lucide-react';
 
 export default function RegisterPage() {
-  const { register, user } = useAuth();
+  const { register, user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -47,7 +47,19 @@ export default function RegisterPage() {
     }
   };
 
-  if (user) return null;
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (user) {
+    const redirectMap: Record<string, string> = { admin: '/admin', professor: '/professor', student: '/student' };
+    router.replace(redirectMap[user.role] || '/');
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-white px-4">
