@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,33 +12,27 @@ import { Label } from '@/components/ui/label';
 import { BookOpen, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
-  const { login, user, loading: authLoading } = useAuth();
+  const { login } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [clearing, setClearing] = useState(true);
 
+  // Always sign out any existing session when the login page loads.
+  // This ensures the user must re-authenticate every time they visit /login.
   useEffect(() => {
-    if (!authLoading && user) {
-      const redirectMap: Record<string, string> = {
-        admin: '/admin',
-        professor: '/professor',
-        student: '/student',
-      };
-      router.replace(redirectMap[user.role] || '/login');
-    }
-  }, [user, authLoading, router]);
+    supabase.auth.signOut().finally(() => setClearing(false));
+  }, []);
 
-  if (authLoading) {
+  if (clearing) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
-
-  if (user) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,6 +42,13 @@ export default function LoginPage() {
     setLoading(false);
     if (!result.success) {
       setError(result.error || 'Error al iniciar sesión');
+    } else if (result.role) {
+      const redirectMap: Record<string, string> = {
+        admin: '/admin',
+        professor: '/professor',
+        student: '/student',
+      };
+      router.replace(redirectMap[result.role] || '/');
     }
   };
 
